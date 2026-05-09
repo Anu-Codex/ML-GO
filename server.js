@@ -154,24 +154,35 @@ io.on('connection', async (socket) => {
     });
 });
 // --- Inside io.on('connection', (socket) => { ---
+    // ADD THIS EXACT BLOCK:
+    socket.on('deletePlayer', async (playerId) => {
+        try {
+            console.log("📥 Delete request received for ID:", playerId);
+            
+            // Validate the ID exists
+            if (!playerId) {
+                console.error("❌ No Player ID provided!");
+                return;
+            }
 
-socket.on('deletePlayer', async (playerId) => {
-    try {
-        console.log("🗑️ Deleting Player ID:", playerId);
-        
-        // 1. Remove from Database
-        await Player.findByIdAndDelete(playerId);
-        
-        // 2. Fetch updated list
-        const updatedPlayers = await Player.find();
-        
-        // 3. Broadcast updated list to EVERYONE
-        io.emit('updatePlayers', updatedPlayers);
-        
-        console.log("✅ Player deleted successfully");
-    } catch (err) {
-        console.error("❌ Error deleting player:", err);
-    }
+            // Perform the deletion
+            const deleted = await Player.findByIdAndDelete(playerId);
+            
+            if (deleted) {
+                console.log(`✅ Player ${deleted.name} removed from DB`);
+                
+                // Get the new list and tell EVERYONE to refresh
+                const allPlayers = await Player.find();
+                io.emit('updatePlayers', allPlayers); 
+            } else {
+                console.log("⚠️ Player not found in DB.");
+            }
+        } catch (err) {
+            console.error("❌ Server Error during delete:", err);
+        }
+    });
+
+    // ... rest of your code ...
 });
 
 server.listen(process.env.PORT || 3000, () => console.log("Server Running"));
