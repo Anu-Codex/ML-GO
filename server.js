@@ -76,43 +76,34 @@ async function autoSellPlayer() {
 
 // --- SOCKETS ---
 io.on('connection', async (socket) => {
+    console.log('User Connected:', socket.id);
+
     socket.emit('initialData', {
         players: await Player.find(),
         teams: await Team.find(),
         chats: await Chat.find().sort({ timestamp: 1 }).limit(50),
         state: auctionState
     });
-    // --- Inside io.on('connection', (socket) => { ... ---
 
     socket.on('addPlayer', async (data) => {
         try {
             console.log("📥 Received Player Data:", data);
-
-            // 1. Create the document
             const newPlayer = new Player({
                 name: data.name,
-                strength: Number(data.strength), // Matches OVR in FC Mobile
+                strength: Number(data.strength), 
                 cardType: data.cardType,
                 baseValue: Number(data.baseValue),
                 status: 'Available',
                 soldTo: '-'
             });
-
-            // 2. Save to MongoDB
             await newPlayer.save();
-            console.log("✅ Player Saved to DB!");
-
-            // 3. Fetch ALL players and broadcast to EVERYONE
             const allPlayers = await Player.find();
             io.emit('updatePlayers', allPlayers); 
-            
-            // 4. Send a chat message automatically
             io.emit('newMessage', { 
                 sender: "SYSTEM", 
                 role: "admin", 
                 text: `🆕 ${data.name} (${data.strength} OVR) added to the roster!` 
             });
-
         } catch (err) {
             console.error("❌ ERROR SAVING PLAYER:", err);
         }
@@ -134,7 +125,7 @@ io.on('connection', async (socket) => {
         if (team && team.budget >= newBid) {
             auctionState.currentBid = newBid;
             auctionState.highestBidder = teamName;
-            startTimer(); // THIS RESETS THE 60 SECONDS
+            startTimer(); 
             io.emit('updateAuction', auctionState);
         }
     });
@@ -152,36 +143,24 @@ io.on('connection', async (socket) => {
         await newMessage.save();
         io.emit('newMessage', data);
     });
-});
-// --- Inside io.on('connection', (socket) => { ---
-    // ADD THIS EXACT BLOCK:
+
+    // --- DELETE PLAYER FUNCTION (Fixed Location) ---
     socket.on('deletePlayer', async (playerId) => {
         try {
             console.log("📥 Delete request received for ID:", playerId);
-            
-            // Validate the ID exists
-            if (!playerId) {
-                console.error("❌ No Player ID provided!");
-                return;
-            }
+            if (!playerId) return;
 
-            // Perform the deletion
             const deleted = await Player.findByIdAndDelete(playerId);
-            
             if (deleted) {
                 console.log(`✅ Player ${deleted.name} removed from DB`);
-                
-                // Get the new list and tell EVERYONE to refresh
                 const allPlayers = await Player.find();
                 io.emit('updatePlayers', allPlayers); 
-            } else {
-                console.log("⚠️ Player not found in DB.");
             }
         } catch (err) {
             console.error("❌ Server Error during delete:", err);
         }
     });
 
-    
+}); // End of Connection Block
 
-server.listen(process.env.PORT || 3000, () => console.log("Server Running"));
+server.listen(process.env.PORT || 3000, () => console.log("Server Running on Port 3000"));
