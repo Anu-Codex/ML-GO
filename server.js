@@ -153,5 +153,25 @@ io.on('connection', async (socket) => {
         io.emit('newMessage', data);
     });
 });
+// --- Inside io.on('connection', (socket) => { ---
+
+socket.on('deletePlayer', async (playerId) => {
+    try {
+        console.log("🗑️ Deleting Player ID:", playerId);
+        
+        // 1. Remove from Database
+        await Player.findByIdAndDelete(playerId);
+        
+        // 2. Fetch updated list
+        const updatedPlayers = await Player.find();
+        
+        // 3. Broadcast updated list to EVERYONE
+        io.emit('updatePlayers', updatedPlayers);
+        
+        console.log("✅ Player deleted successfully");
+    } catch (err) {
+        console.error("❌ Error deleting player:", err);
+    }
+});
 
 server.listen(process.env.PORT || 3000, () => console.log("Server Running"));
