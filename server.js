@@ -24,26 +24,44 @@ const Player = mongoose.model('Player', playerSchema);
 const Team = mongoose.model('Team', teamSchema);
 const Chat = mongoose.model('Chat', chatSchema);
 
+// --- NEW: AUTOMATIC TEAM SEEDING ---
+// This ensures your new database has the teams needed for bidding
+async function seedTeams() {
+    const teams = [
+        { name: "ML Admin", budget: 9999 },
+        { name: "Mystic Strikers", budget: 1000 },
+        { name: "Legendary XI", budget: 1000 }
+    ];
+
+    for (let t of teams) {
+        const exists = await Team.findOne({ name: t.name });
+        if (!exists) {
+            await new Team(t).save();
+            console.log(`🌱 Seeded team: ${t.name}`);
+        }
+    }
+}
+seedTeams();
+
 // --- AUCTION LOGIC & TIMER ---
 let auctionState = {
     activePlayerId: null,
     currentBid: 0,
     highestBidder: 'No Bids Yet',
-    timeLeft: 60 // The 60-second clock
+    timeLeft: 60 
 };
 
 let timerInterval = null;
 
 function startTimer() {
     clearInterval(timerInterval);
-    auctionState.timeLeft = 60; // Reset to 60
+    auctionState.timeLeft = 60;
     
     timerInterval = setInterval(async () => {
         auctionState.timeLeft--;
-        
         if (auctionState.timeLeft <= 0) {
             clearInterval(timerInterval);
-            await autoSellPlayer(); // Auto-sell when time hits 0
+            await autoSellPlayer();
         } else {
             io.emit('updateAuction', auctionState);
         }
@@ -68,7 +86,6 @@ async function autoSellPlayer() {
         io.emit('updateAuction', auctionState);
         io.emit('newMessage', { sender: "SYSTEM", role: "admin", text: `🔴 SOLD! ${teamName} bought the player.` });
     } else {
-        // If time ran out with no bids
         auctionState = { activePlayerId: null, currentBid: 0, highestBidder: 'No Bids Yet', timeLeft: 0 };
         io.emit('updateAuction', auctionState);
     }
@@ -87,7 +104,6 @@ io.on('connection', async (socket) => {
 
     socket.on('addPlayer', async (data) => {
         try {
-            console.log("📥 Received Player Data:", data);
             const newPlayer = new Player({
                 name: data.name,
                 strength: Number(data.strength), 
@@ -97,16 +113,8 @@ io.on('connection', async (socket) => {
                 soldTo: '-'
             });
             await newPlayer.save();
-            const allPlayers = await Player.find();
-            io.emit('updatePlayers', allPlayers); 
-            io.emit('newMessage', { 
-                sender: "SYSTEM", 
-                role: "admin", 
-                text: `🆕 ${data.name} (${data.strength} OVR) added to the roster!` 
-            });
-        } catch (err) {
-            console.error("❌ ERROR SAVING PLAYER:", err);
-        }
+            io.emit('updatePlayers', await Player.find()); 
+        } catch (err) { console.error(err); }
     });
 
     socket.on('startAuction', async ({ playerId, baseValue }) => {
@@ -119,14 +127,23 @@ io.on('connection', async (socket) => {
     });
 
     socket.on('placeBid', async ({ teamName, increment }) => {
+        console.log(`Bid Attempt: ${teamName} +${increment}`);
         const team = await Team.findOne({ name: teamName });
+        
+        if (!team) {
+            console.log("❌ Bid Failed: Team not found in Database!");
+            return;
+        }
+
         const newBid = auctionState.currentBid + increment;
 
-        if (team && team.budget >= newBid) {
+        if (team.budget >= newBid) {
             auctionState.currentBid = newBid;
             auctionState.highestBidder = teamName;
             startTimer(); 
             io.emit('updateAuction', auctionState);
+        } else {
+            console.log("❌ Bid Failed: Low Budget");
         }
     });
 
@@ -144,23 +161,12 @@ io.on('connection', async (socket) => {
         io.emit('newMessage', data);
     });
 
-    // --- DELETE PLAYER FUNCTION (Fixed Location) ---
     socket.on('deletePlayer', async (playerId) => {
         try {
-            console.log("📥 Delete request received for ID:", playerId);
-            if (!playerId) return;
-
-            const deleted = await Player.findByIdAndDelete(playerId);
-            if (deleted) {
-                console.log(`✅ Player ${deleted.name} removed from DB`);
-                const allPlayers = await Player.find();
-                io.emit('updatePlayers', allPlayers); 
-            }
-        } catch (err) {
-            console.error("❌ Server Error during delete:", err);
-        }
+            await Player.findByIdAndDelete(playerId);
+            io.emit('updatePlayers', await Player.find()); 
+        } catch (err) { console.error(err); }
     });
+});
 
-}); // End of Connection Block
-
-server.listen(process.env.PORT || 3000, () => console.log("Server Running on Port 3000"));
+server.listen(process.env.PORT || 3000, () => console.log("Server Running"));
