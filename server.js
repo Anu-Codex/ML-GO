@@ -82,6 +82,41 @@ io.on('connection', async (socket) => {
         chats: await Chat.find().sort({ timestamp: 1 }).limit(50),
         state: auctionState
     });
+    // --- Inside io.on('connection', (socket) => { ... ---
+
+    socket.on('addPlayer', async (data) => {
+        try {
+            console.log("📥 Received Player Data:", data);
+
+            // 1. Create the document
+            const newPlayer = new Player({
+                name: data.name,
+                strength: Number(data.strength), // Matches OVR in FC Mobile
+                cardType: data.cardType,
+                baseValue: Number(data.baseValue),
+                status: 'Available',
+                soldTo: '-'
+            });
+
+            // 2. Save to MongoDB
+            await newPlayer.save();
+            console.log("✅ Player Saved to DB!");
+
+            // 3. Fetch ALL players and broadcast to EVERYONE
+            const allPlayers = await Player.find();
+            io.emit('updatePlayers', allPlayers); 
+            
+            // 4. Send a chat message automatically
+            io.emit('newMessage', { 
+                sender: "SYSTEM", 
+                role: "admin", 
+                text: `🆕 ${data.name} (${data.strength} OVR) added to the roster!` 
+            });
+
+        } catch (err) {
+            console.error("❌ ERROR SAVING PLAYER:", err);
+        }
+    });
 
     socket.on('startAuction', async ({ playerId, baseValue }) => {
         const player = await Player.findById(playerId);
