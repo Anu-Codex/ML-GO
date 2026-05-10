@@ -24,21 +24,19 @@ const Player = mongoose.model('Player', playerSchema);
 const Team = mongoose.model('Team', teamSchema);
 const Chat = mongoose.model('Chat', chatSchema);
 
-// --- NEW: AUTOMATIC TEAM SEEDING ---
-// This ensures your new database has the teams needed for bidding
+// --- AUTOMATIC TEAM SEEDING ---
 async function seedTeams() {
     const teams = [
-        { name: "Team ICONIC", budget: 100 },
-        { name: "Neimesis eSports", budget: 100 },
-        { name: "Bluster FC", budget: 100 },
         { name: "Virat FC", budget: 100 },
-        { name: "Skystrikers United", budget: 100 },
+        { name: "Neimesis eSports", budget: 100 },
+        { name: "Team ICONIC", budget: 100 },
+        { name: "Bluster FC", budget: 100 },
         { name: "Let it go na", budget: 100 },
-        { name: "Team ICONIC", budget: 100 },
-        { name: "Team ICONIC", budget: 100 },
-        { name: "Team ICONIC", budget: 100 },
-        { name: "Team ICONIC", budget: 100 }
-    
+        { name: "Skystrikers United", budget: 100 },
+        { name: "Mystic Strikers", budget: 100 },
+        { name: "Legendary XI", budget: 100 },
+        { name: "Virat FC", budget: 100 },
+        { name: "Virat FC", budget: 100 }
     ];
 
     for (let t of teams) {
@@ -50,36 +48,36 @@ async function seedTeams() {
     }
 }
 seedTeams();
+
+// --- HTTP ROUTES ---
+
+// Fixed the syntax error here. We only insert Name and Budget into the DB.
 app.get('/reset-teams', async (req, res) => {
     try {
-        await Team.deleteMany({}); // Delete old corrupted teams
-        
-        // ADD ALL 6 TEAMS HERE EXACTLY AS THEY ARE IN YOUR FRONTEND:
-        await Team.insertMany([
-            { "surjanshu@mystic.com": { name: "Virat FC", role: "captain", pass: "surjanshu123" },
-            "ahitagni@mystic.com": { name: "Neimesis eSports", role: "captain", pass: "ahitagni123" },
-            "ritam@mystic.com": { name: "Team ICONIC", role: "captain", pass: "ritam123" },
-            "anish@mystic.com": { name: "Bluster FC", role: "captain", pass: "anish123" },
-            "debatreya@mystic.com": { name: "Let it go na", role: "captain", pass: "debatreya123" },
-            "hitanshu@mystic.com": { name: "Skystrikers United", role: "captain", pass: "hitanshu123" },
-            "aritra@mystic.com": { name: "Mystic Strikers", role: "captain", pass: "aritra123" },
-            "nil@mystic.com": { name: "Legendary XI", role: "captain", pass: "nil123" },
-            "debojit@mystic.com": { name: "Mystic Strikers", role: "captain", pass: "debojit123" },
-            "arghya@mystic.com": { name: "Legendary XI", role: "captain", pass: "arghya123" }
-        ]);
-        
-        res.send("✅ All 6 Teams successfully reset and budgets restored to 200 Lakhs! You can close this page and go back to your auction.");
+        await Team.deleteMany({}); 
+        const teamData = [
+            { name: "Virat FC", budget: 100 },
+            { name: "Neimesis eSports", budget: 100 },
+            { name: "Team ICONIC", budget: 100 },
+            { name: "Bluster FC", budget: 100 },
+            { name: "Let it go na", budget: 100 },
+            { name: "Skystrikers United", budget: 100 },
+            { name: "Mystic Strikers", budget: 100 },
+            { name: "Legendary XI", budget: 100 },
+            { name: "Virat FC", budget: 100 },
+            { name: "Virat FC", budget: 100 }
+        ];
+        await Team.insertMany(teamData);
+        res.send("✅ Teams successfully reset and budgets restored to 100L!");
     } catch (e) {
         res.status(500).send("Error resetting teams: " + e.message);
     }
 });
-// SECRET ROUTE TO FIX CRASHED BUDGETS
+
 app.get('/fix-budgets', async (req, res) => {
     try {
-        // $set forces the database to erase the bad math and perfectly set the budget to 500 Lakhs (5 Cr)
         await Team.updateMany({}, { $set: { budget: 100 } });
-        
-        res.send("✅ All Team budgets have been successfully rescued and reset to exactly 500 Lakhs (5 Cr)! You can close this page and refresh your auction website.");
+        res.send("✅ All Team budgets reset to 100L!");
     } catch (e) {
         res.status(500).send("Error fixing budgets: " + e.message);
     }
