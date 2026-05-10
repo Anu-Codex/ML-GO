@@ -50,6 +50,40 @@ async function seedTeams() {
     }
 }
 seedTeams();
+app.get('/reset-teams', async (req, res) => {
+    try {
+        await Team.deleteMany({}); // Delete old corrupted teams
+        
+        // ADD ALL 6 TEAMS HERE EXACTLY AS THEY ARE IN YOUR FRONTEND:
+        await Team.insertMany([
+            { "surjanshu@mystic.com": { name: "Virat FC", role: "captain", pass: "surjanshu123" },
+            "ahitagni@mystic.com": { name: "Neimesis eSports", role: "captain", pass: "ahitagni123" },
+            "ritam@mystic.com": { name: "Team ICONIC", role: "captain", pass: "ritam123" },
+            "anish@mystic.com": { name: "Bluster FC", role: "captain", pass: "anish123" },
+            "debatreya@mystic.com": { name: "Let it go na", role: "captain", pass: "debatreya123" },
+            "hitanshu@mystic.com": { name: "Skystrikers United", role: "captain", pass: "hitanshu123" },
+            "aritra@mystic.com": { name: "Mystic Strikers", role: "captain", pass: "aritra123" },
+            "nil@mystic.com": { name: "Legendary XI", role: "captain", pass: "nil123" },
+            "debojit@mystic.com": { name: "Mystic Strikers", role: "captain", pass: "debojit123" },
+            "arghya@mystic.com": { name: "Legendary XI", role: "captain", pass: "arghya123" }
+        ]);
+        
+        res.send("✅ All 6 Teams successfully reset and budgets restored to 200 Lakhs! You can close this page and go back to your auction.");
+    } catch (e) {
+        res.status(500).send("Error resetting teams: " + e.message);
+    }
+});
+// SECRET ROUTE TO FIX CRASHED BUDGETS
+app.get('/fix-budgets', async (req, res) => {
+    try {
+        // $set forces the database to erase the bad math and perfectly set the budget to 500 Lakhs (5 Cr)
+        await Team.updateMany({}, { $set: { budget: 100 } });
+        
+        res.send("✅ All Team budgets have been successfully rescued and reset to exactly 500 Lakhs (5 Cr)! You can close this page and refresh your auction website.");
+    } catch (e) {
+        res.status(500).send("Error fixing budgets: " + e.message);
+    }
+});
 
 // --- AUCTION LOGIC & TIMER ---
 let auctionState = {
