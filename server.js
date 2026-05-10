@@ -25,21 +25,21 @@ const Team = mongoose.model('Team', teamSchema);
 const Chat = mongoose.model('Chat', chatSchema);
 
 // --- AUTOMATIC TEAM SEEDING ---
-async function seedTeams() {
-    const teams = [
-        { name: "Virat FC", budget: 100 },
-        { name: "Neimesis eSports", budget: 100 },
-        { name: "Team ICONIC", budget: 100 },
-        { name: "Bluster FC", budget: 100 },
-        { name: "Let it go na", budget: 100 },
-        { name: "Skystrikers United", budget: 100 },
-        { name: "ELITE MSN", budget: 100 },
-        { name: "Visca", budget: 100 },
-        { name: "MI CHAMPSS", budget: 100 },
-        { name: "PREDETORS TRIO", budget: 100 }
-    ];
+const teamList = [
+    { name: "Virat FC", budget: 100 },
+    { name: "Neimesis eSports", budget: 100 },
+    { name: "Team ICONIC", budget: 100 },
+    { name: "Bluster FC", budget: 100 },
+    { name: "Let it go na", budget: 100 },
+    { name: "Skystrikers United", budget: 100 },
+    { name: "MI CHAMPSS", budget: 100 },
+    { name: "ELITE MSN", budget: 100 },
+    { name: "Visca", budget: 100 },
+    { name: "PREDETORS TRIO", budget: 100 }
+];
 
-    for (let t of teams) {
+async function seedTeams() {
+    for (let t of teamList) {
         const exists = await Team.findOne({ name: t.name });
         if (!exists) {
             await new Team(t).save();
@@ -50,53 +50,28 @@ async function seedTeams() {
 seedTeams();
 
 // --- HTTP ROUTES ---
-
-// Fixed the syntax error here. We only insert Name and Budget into the DB.
 app.get('/reset-teams', async (req, res) => {
     try {
         await Team.deleteMany({}); 
-        const teamData = [
-            { name: "Virat FC", budget: 100 },
-            { name: "Neimesis eSports", budget: 100 },
-            { name: "Team ICONIC", budget: 100 },
-            { name: "Bluster FC", budget: 100 },
-            { name: "Let it go na", budget: 100 },
-            { name: "Skystrikers United", budget: 100 },
-            { name: "ELITE MSN", budget: 100 },
-            { name: "Visca", budget: 100 },
-            { name: "MI CHAMPSS", budget: 100 },
-            { name: "PREDETORS TRIO", budget: 100 }
-        ];
-        await Team.insertMany(teamData);
-        res.send("✅ Teams successfully reset and budgets restored to 100L!");
-    } catch (e) {
-        res.status(500).send("Error resetting teams: " + e.message);
-    }
+        await Team.insertMany(teamList);
+        res.send("✅ Teams successfully reset to 100L!");
+    } catch (e) { res.status(500).send(e.message); }
 });
 
 app.get('/fix-budgets', async (req, res) => {
     try {
         await Team.updateMany({}, { $set: { budget: 100 } });
-        res.send("✅ All Team budgets reset to 100L!");
-    } catch (e) {
-        res.status(500).send("Error fixing budgets: " + e.message);
-    }
+        res.send("✅ All budgets reset to 100L!");
+    } catch (e) { res.status(500).send(e.message); }
 });
 
 // --- AUCTION LOGIC & TIMER ---
-let auctionState = {
-    activePlayerId: null,
-    currentBid: 0,
-    highestBidder: 'No Bids Yet',
-    timeLeft: 60 
-};
-
+let auctionState = { activePlayerId: null, currentBid: 0, highestBidder: 'No Bids Yet', timeLeft: 60 };
 let timerInterval = null;
 
 function startTimer() {
     clearInterval(timerInterval);
     auctionState.timeLeft = 60;
-    
     timerInterval = setInterval(async () => {
         auctionState.timeLeft--;
         if (auctionState.timeLeft <= 0) {
@@ -124,7 +99,7 @@ async function autoSellPlayer() {
         io.emit('updatePlayers', await Player.find());
         io.emit('updateTeams', await Team.find());
         io.emit('updateAuction', auctionState);
-        io.emit('newMessage', { sender: "SYSTEM", role: "admin", text: `🔴 SOLD! ${teamName} bought the player.` });
+        io.emit('newMessage', { sender: "SYSTEM", role: "admin", text: `🔴 SOLD! ${teamName} bought the player for ${price}L.` });
     } else {
         auctionState = { activePlayerId: null, currentBid: 0, highestBidder: 'No Bids Yet', timeLeft: 0 };
         io.emit('updateAuction', auctionState);
@@ -133,8 +108,6 @@ async function autoSellPlayer() {
 
 // --- SOCKETS ---
 io.on('connection', async (socket) => {
-    console.log('User Connected:', socket.id);
-
     socket.emit('initialData', {
         players: await Player.find(),
         teams: await Team.find(),
@@ -144,14 +117,7 @@ io.on('connection', async (socket) => {
 
     socket.on('addPlayer', async (data) => {
         try {
-            const newPlayer = new Player({
-                name: data.name,
-                strength: Number(data.strength), 
-                cardType: data.cardType,
-                baseValue: Number(data.baseValue),
-                status: 'Available',
-                soldTo: '-'
-            });
+            const newPlayer = new Player({ ...data, strength: Number(data.strength), baseValue: Number(data.baseValue) });
             await newPlayer.save();
             io.emit('updatePlayers', await Player.find()); 
         } catch (err) { console.error(err); }
@@ -167,75 +133,39 @@ io.on('connection', async (socket) => {
     });
 
     socket.on('placeBid', async ({ teamName, increment }) => {
-        console.log(`Bid Attempt: ${teamName} +${increment}`);
         const team = await Team.findOne({ name: teamName });
-        
-        if (!team) {
-            console.log("❌ Bid Failed: Team not found in Database!");
-            return;
-        }
-
         const newBid = auctionState.currentBid + increment;
-
-        if (team.budget >= newBid) {
+        if (team && team.budget >= newBid) {
             auctionState.currentBid = newBid;
             auctionState.highestBidder = teamName;
             startTimer(); 
             io.emit('updateAuction', auctionState);
-        } else {
-            console.log("❌ Bid Failed: Low Budget");
         }
     });
 
     socket.on('sellPlayer', autoSellPlayer);
-
     socket.on('cancelAuction', () => {
         clearInterval(timerInterval);
         auctionState = { activePlayerId: null, currentBid: 0, highestBidder: 'No Bids Yet', timeLeft: 0 };
         io.emit('updateAuction', auctionState);
     });
 
-    socket.on('sendMessage', async (data) => {
-        const newMessage = new Chat(data);
-        await newMessage.save();
-        io.emit('newMessage', data);
-    });
-    // --- Inside io.on('connection', (socket) => { ---
-
     socket.on('addBonus', async ({ teamName, amount }) => {
         try {
-            if (!teamName || !amount) return;
+            await Team.findOneAndUpdate({ name: teamName }, { $inc: { budget: Number(amount) } });
+            io.emit('updateTeams', await Team.find());
+            io.emit('newMessage', { sender: "SYSTEM", role: "admin", text: `✨ ${teamName} purse adjusted by ${amount}L!` });
+        } catch (err) { console.error(err); }
+    });
 
-            // 1. Update the budget in the database
-            // Note: amount can be positive (bonus) or negative (penalty)
-            await Team.findOneAndUpdate(
-                { name: teamName },
-                { $inc: { budget: Number(amount) } }
-            );
-
-            console.log(`💰 Added ${amount}L to ${teamName}`);
-
-            // 2. Fetch all teams and broadcast new balances to everyone
-            const allTeams = await Team.find();
-            io.emit('updateTeams', allTeams);
-
-            // 3. Optional: Send a system message to the chat
-            io.emit('newMessage', { 
-                sender: "SYSTEM", 
-                role: "admin", 
-                text: `✨ ${teamName} received a purse adjustment of ${amount}L!` 
-            });
-
-        } catch (err) {
-            console.error("Bonus Error:", err);
-        }
+    socket.on('sendMessage', async (data) => {
+        await new Chat(data).save();
+        io.emit('newMessage', data);
     });
 
     socket.on('deletePlayer', async (playerId) => {
-        try {
-            await Player.findByIdAndDelete(playerId);
-            io.emit('updatePlayers', await Player.find()); 
-        } catch (err) { console.error(err); }
+        await Player.findByIdAndDelete(playerId);
+        io.emit('updatePlayers', await Player.find()); 
     });
 });
 
