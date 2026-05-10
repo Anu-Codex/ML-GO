@@ -33,7 +33,7 @@ async function seedTeams() {
         { name: "Bluster FC", budget: 100 },
         { name: "Let it go na", budget: 100 },
         { name: "Skystrikers United", budget: 100 },
-        { name: "Mystic Strikers", budget: 100 },
+        { name: "ELITE MSN", budget: 100 },
         { name: "Legendary XI", budget: 100 },
         { name: "MI CHAMPSS", budget: 100 },
         { name: "PREDETORS TRIO", budget: 100 }
@@ -62,7 +62,7 @@ app.get('/reset-teams', async (req, res) => {
             { name: "Bluster FC", budget: 100 },
             { name: "Let it go na", budget: 100 },
             { name: "Skystrikers United", budget: 100 },
-            { name: "Mystic Strikers", budget: 100 },
+            { name: "ELITE MSN", budget: 100 },
             { name: "Legendary XI", budget: 100 },
             { name: "MI CHAMPSS", budget: 100 },
             { name: "PREDETORS TRIO", budget: 100 }
