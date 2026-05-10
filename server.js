@@ -200,6 +200,36 @@ io.on('connection', async (socket) => {
         await newMessage.save();
         io.emit('newMessage', data);
     });
+    // --- Inside io.on('connection', (socket) => { ---
+
+    socket.on('addBonus', async ({ teamName, amount }) => {
+        try {
+            if (!teamName || !amount) return;
+
+            // 1. Update the budget in the database
+            // Note: amount can be positive (bonus) or negative (penalty)
+            await Team.findOneAndUpdate(
+                { name: teamName },
+                { $inc: { budget: Number(amount) } }
+            );
+
+            console.log(`💰 Added ${amount}L to ${teamName}`);
+
+            // 2. Fetch all teams and broadcast new balances to everyone
+            const allTeams = await Team.find();
+            io.emit('updateTeams', allTeams);
+
+            // 3. Optional: Send a system message to the chat
+            io.emit('newMessage', { 
+                sender: "SYSTEM", 
+                role: "admin", 
+                text: `✨ ${teamName} received a purse adjustment of ${amount}L!` 
+            });
+
+        } catch (err) {
+            console.error("Bonus Error:", err);
+        }
+    });
 
     socket.on('deletePlayer', async (playerId) => {
         try {
