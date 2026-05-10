@@ -28,9 +28,17 @@ const Chat = mongoose.model('Chat', chatSchema);
 // This ensures your new database has the teams needed for bidding
 async function seedTeams() {
     const teams = [
-        { name: "ML Admin", budget: 9999 },
-        { name: "Mystic Strikers", budget: 1000 },
-        { name: "Legendary XI", budget: 1000 }
+        { name: "Team ICONIC", budget: 100 },
+        { name: "Neimesis eSports", budget: 100 },
+        { name: "Bluster FC", budget: 100 },
+        { name: "Team ICONIC", budget: 100 },
+        { name: "Team ICONIC", budget: 100 },
+        { name: "Team ICONIC", budget: 100 },
+        { name: "Team ICONIC", budget: 100 },
+        { name: "Team ICONIC", budget: 100 },
+        { name: "Team ICONIC", budget: 100 },
+        { name: "Team ICONIC", budget: 100 }
+    
     ];
 
     for (let t of teams) {
