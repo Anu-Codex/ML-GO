@@ -35,8 +35,8 @@ async function seedTeams() {
         { name: "Skystrikers United", budget: 100 },
         { name: "Mystic Strikers", budget: 100 },
         { name: "Legendary XI", budget: 100 },
-        { name: "Virat FC", budget: 100 },
-        { name: "Virat FC", budget: 100 }
+        { name: "MI CHAMPSS", budget: 100 },
+        { name: "PREDETORS TRIO", budget: 100 }
     ];
 
     for (let t of teams) {
@@ -64,8 +64,8 @@ app.get('/reset-teams', async (req, res) => {
             { name: "Skystrikers United", budget: 100 },
             { name: "Mystic Strikers", budget: 100 },
             { name: "Legendary XI", budget: 100 },
-            { name: "Virat FC", budget: 100 },
-            { name: "Virat FC", budget: 100 }
+            { name: "MI CHAMPSS", budget: 100 },
+            { name: "PREDETORS TRIO", budget: 100 }
         ];
         await Team.insertMany(teamData);
         res.send("✅ Teams successfully reset and budgets restored to 100L!");
